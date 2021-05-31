@@ -11,6 +11,7 @@ import java.net.Socket;
 import ro.pub.cs.systems.eim.lab06.singlethreadedserver.general.Constants;
 import ro.pub.cs.systems.eim.lab06.singlethreadedserver.general.Utilities;
 
+
 public class ServerThread extends Thread {
 
     private boolean isRunning;
@@ -30,17 +31,22 @@ public class ServerThread extends Thread {
 
     public void stopServer() {
         isRunning = false;
-        try {
-            if (serverSocket != null) {
-                serverSocket.close();
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    if (serverSocket != null) {
+                        serverSocket.close();
+                    }
+                    Log.v(Constants.TAG, "stopServer() method invoked " + serverSocket);
+                } catch(IOException ioException) {
+                    Log.e(Constants.TAG, "An exception has occurred: " + ioException.getMessage());
+                    if (Constants.DEBUG) {
+                        ioException.printStackTrace();
+                    }
+                }
             }
-        } catch (IOException ioException) {
-            Log.e(Constants.TAG, "An exception has occurred: " + ioException.getMessage());
-            if (Constants.DEBUG) {
-                ioException.printStackTrace();
-            }
-        }
-        Log.v(Constants.TAG, "stopServer() method invoked");
+        }).start();
     }
 
     @Override
@@ -49,19 +55,10 @@ public class ServerThread extends Thread {
             serverSocket = new ServerSocket(Constants.SERVER_PORT);
             while (isRunning) {
                 Socket socket = serverSocket.accept();
-                Log.v(Constants.TAG, "Connection opened with " + socket.getInetAddress() + ":" + socket.getLocalPort());
-
-                // TODO exercise 5c
-                // simulate the fact the communication routine between the server and the client takes 3 seconds
-
-                PrintWriter printWriter = Utilities.getWriter(socket);
-                printWriter.println(serverTextEditText.getText().toString());
-                socket.close();
-                Log.v(Constants.TAG, "Connection closed");
-
-                // TODO exercise 5d
-                // move the communication routine between the server and the client on a separate thread (each)
-
+                if (socket != null) {
+                    CommunicationThread communicationThread = new CommunicationThread(socket, serverTextEditText);
+                    communicationThread.start();
+                }
             }
         } catch (IOException ioException) {
             Log.e(Constants.TAG, "An exception has occurred: " + ioException.getMessage());
